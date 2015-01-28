@@ -22,8 +22,11 @@ img {
 <style type="text/css"></style></head>
 <body>
   <div class="container">
-    <h1>Displaying User Data</h1>
-    <p>Log in with your Spotify account and this demo will display information about you fetched using the Spotify Web API</p>
+    <h1>Make Me A Playlist</h1>
+    <p>Ever wanted a playlist with new artists and similar mood to one of your existing playlists, but can't be bothered to build it? Make me a playlist is for you! Just Log in, select the playlist you want to emulate, and watch as this lists the songs that will be a part of your brand new playlist. Click 'Start this thang' to add the playlist to your library, and get listening! </p>
+    <p>
+      Note: I did this in like 4 hours, so there's no styling. If you want more prettiness or features, comment on the <a href="https:/github.com/ghmeier/make-me-a-playlist">github</a>
+    </p>
     <button class="btn btn-primary" id="btn-login">Login</button>
     <div id="prospective"></div>
     <div id="result"></div>
@@ -233,16 +236,17 @@ Handlebars.registerHelper('newlist', function(items, options) {
       var tracks = [];
       var iter = 0;
       getPlaylistTracks(accessToken,userId,playlistId,30).then(function(response){
-        for (i in response.items){
+        for (i=0;i<response.items.length;i++){
           var track = {};
           track['name'] = response.items[i].track.name;
           track['id'] = response.items[i].track.id;
           track['album'] = response.items[i].track.album.name;
-          track['artistName'] = response.items[i].track.artists[iter].name;
-          track['artistId'] = response.items[i].track.artists[iter].id;
+          track['artistName'] = response.items[i].track.artists[0].name;
+          track['artistId'] = response.items[i].track.artists[0].id;
           tracks.push(track);
 
           if (response.items.length + iter < 30){
+            console.log(i);
             i--;
             iter++;
           }
@@ -262,8 +266,9 @@ Handlebars.registerHelper('newlist', function(items, options) {
       var iter = 0;
       $.each(similar,function(i){
           getTopTrack(accessToken,similar[i].id).done(function(response){
-            if (response.tracks[0] && response.tracks[0].name){
-              var track = response.tracks[0];
+            var index = Math.floor(Math.random()*response.tracks.length);
+            if (response.tracks[index] && response.tracks[index].name){
+              var track = response.tracks[index];
               items.push(track);
               renderSimilar(accessToken,userId,items);
             }
