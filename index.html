@@ -1,0 +1,355 @@
+<html><head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>Make Me A Playlist</title>
+    
+      <link rel="stylesheet" type="text/css" href="https://developer.spotify.com/web-api/static/css/cached.css">
+      <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>    
+      <script type="text/javascript" src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    
+  
+  <style type="text/css">
+    .container {
+    margin: 1em;
+}
+
+img {
+    margin-bottom: 1em;
+}
+  </style>
+  
+
+
+<style type="text/css"></style></head>
+<body>
+  <div class="container">
+    <h1>Displaying User Data</h1>
+    <p>Log in with your Spotify account and this demo will display information about you fetched using the Spotify Web API</p>
+    <button class="btn btn-primary" id="btn-login">Login</button>
+    <div id="prospective"></div>
+    <div id="result"></div>
+    <div id="playlist"></div>
+</div>
+<script id="result-template" type="text/x-handlebars-template">
+    <dl>
+      <img src="{{images.0.url}}">
+      <dt>User Name</dt>
+      <dd>{{id}}</dd>
+      <dt>Display Name</dt>
+      <dd>{{display_name}}</dd>
+      <dt>Followers</dt>
+      <dd>{{followers.total}}</dd>
+      <dt>Profile</dt>
+      <dd><a href="{{external_urls.spotify}}" target="_blank">{{external_urls.spotify}}</a></dd>
+      <dt>Email</dt>
+      <dd>{{email}}</dd>
+    </dl>
+</script>
+
+<script id="playlist-template" type="text/x-handlebars-template">
+{{#list items}}{{name}}{{/list}}
+</script>
+
+<script id="track-list-template" type="text/x-handlebars-template">
+{{#tracklist items}}{{name}} by {{artists.0.name}} on {{album.name}}{{/tracklist}}
+</script>
+
+<script id="new-list-template" type="text/x-handlebars-template">
+{{#newlist items}}{{name}} by {{artists.0.name}} on {{album.name}}{{/newlist}}
+</script>
+  
+
+  <script type="text/javascript">//<![CDATA[ 
+window.onload=function(){
+(function() {
+  Handlebars.registerHelper('list', function(items, options) {
+  var out = "<ul>";
+
+  for(var i=0, l=items.length; i<l; i++) {
+    out = out + "<li id='"+items[i].id+"'>" + options.fn(items[i]) + "</li>"+"<ul><button id='"+items[i].id+"_get'>Get Similar Tracks!</button></ul>";
+
+  }
+
+  return out + "</ul>";
+});
+
+Handlebars.registerHelper('tracklist', function(items, options) {
+  var out = "<ul id='tracks'>";
+
+  for(var i=0, l=items.length; i<l; i++) {
+    out = out + "<li>" + options.fn(items[i].track) + "</li>";
+
+  }
+
+  return out + "</ul>";
+});
+
+Handlebars.registerHelper('newlist', function(items, options) {
+  var out = "<h3>New Playlist</h3><ul id='tracks'>";
+  var uris = [];
+  for(var i=0, l=items.length; i<l; i++) {
+    out = out + "<li>" + options.fn(items[i]) + "</li>";
+    uris.push(items[i].uri);
+  }
+  return out + "</ul><div><input id='name' type='type' name='playlist-name' placeholder='playlist name'><button id='new-list-button' class='"+uris.join(",")+"'>Create This Thang</button></div>";
+});
+
+    function login(callback) {
+        var CLIENT_ID = 'ff3f738d49e74607b92e27a50e8e424d';
+        var REDIRECT_URI = 'http://localhost/make-me-a-playlist/callback.html';
+        function getLoginURL(scopes) {
+            return 'https://accounts.spotify.com/authorize?client_id=' + CLIENT_ID +
+              '&redirect_uri=' + encodeURIComponent(REDIRECT_URI) +
+              '&scope=' + encodeURIComponent(scopes.join(' ')) +
+              '&response_type=token';
+        }
+        
+        var url = getLoginURL([
+            'user-read-email',"playlist-read-private","playlist-modify-public","playlist-modify-private","user-library-read"
+        ]);
+        
+        var width = 450,
+            height = 730,
+            left = (screen.width / 2) - (width / 2),
+            top = (screen.height / 2) - (height / 2);
+    
+        window.addEventListener("message", function(event) {
+            var hash = JSON.parse(event.data);
+            if (hash.type == 'access_token') {
+                callback(hash.access_token);
+            }
+        }, false);
+        
+        var w = window.open(url,
+                            'Spotify',
+                            'menubar=no,location=no,resizable=no,scrollbars=no,status=no, width=' + width + ', height=' + height + ', top=' + top + ', left=' + left
+                           );
+        
+    }
+
+    function getUserData(accessToken) {
+      console.log(accessToken);
+        return $.ajax({
+            url: 'https://api.spotify.com/v1/me',
+            headers: {
+               'Authorization': 'Bearer ' + accessToken
+            }
+        });
+    }
+
+    function getUserPlaylist(accessToken,userId){
+        return $.ajax({
+            url: 'https://api.spotify.com/v1/users/'+userId+"/playlists?offset=0",
+            headers: {
+               'Authorization': 'Bearer ' + accessToken
+            }
+        });     
+    }
+
+    function getTopTrack(accessToken,artistId){
+      return $.ajax({
+            url: 'https://api.spotify.com/v1/artists/'+artistId+"/top-tracks?country=US",
+            headers: {
+               'Authorization': 'Bearer ' + accessToken
+            }
+        });     
+    }
+
+    function createPlaylist(accessToken,userId,name){
+       return $.ajax({
+            type:"POST",
+            url: 'https://api.spotify.com/v1/users/'+userId+"/playlists",
+            data: "{\"name\":\""+name+"\",\"public\":\"false\"}",
+            headers: {
+               'Authorization': 'Bearer ' + accessToken
+            }
+        });        
+    }
+
+    function addSongsPlaylist(accessToken,userId,playlistId,songs){
+       return $.ajax({
+            type:"POST",
+            url: 'https://api.spotify.com/v1/users/'+userId+"/playlists/"+playlistId+"/tracks?position=0&uris="+encodeURIComponent(songs),
+            headers: {
+               'Authorization': 'Bearer ' + accessToken
+            }
+        });        
+    }
+
+    function renderPlaylists(response,userId,accessToken){
+          var personalPlaylists = {items:[]};
+              for (i in response.items){
+                if (response.items[i].owner.id === userId){
+                  personalPlaylists.items.push(response.items[i]);
+                }
+              }
+              var templateSource = document.getElementById('playlist-template').innerHTML,
+              template = Handlebars.compile(templateSource),
+              resultsPlaceholder = document.getElementById('playlist');
+              resultsPlaceholder.innerHTML = template(personalPlaylists);
+
+              for (i in personalPlaylists.items){
+                var playlistButton = document.getElementById(personalPlaylists.items[i].id);
+                playlistButton.addEventListener("click",function(e){
+                  var playlistId = e.target.id;
+                  playlistClick(accessToken,userId,playlistId);
+                });
+                var moreButton = document.getElementById(personalPlaylists.items[i].id+"_get");
+                moreButton.addEventListener('click',function(e){
+                  var playlistId = e.target.id.replace("_get","");
+                  getSimilarPlaylist(accessToken,userId,playlistId);
+                });
+              }
+    }
+
+    function playlistClick(accessToken,userId,playlistId){
+      getPlaylistTracks(accessToken,userId,playlistId).then(function(response){
+        renderPlaylistTracks(response,userId,playlistId);
+      });
+    }
+
+    function getPlaylistTracks(accessToken,userId,playlistId,limit){
+      var url = "https://api.spotify.com/v1/users/"+userId+"/playlists/"+playlistId+"/tracks?fields=items(track(id,name,album(id,name),artists(name,id)))&offset=0";
+        if (limit){
+          url+="&limit="+limit;
+        }
+      return $.ajax({
+        url: url,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
+      });
+    }
+
+    function renderPlaylistTracks(response,userId,playlistId){
+          console.log(response);
+          var templateSource = document.getElementById('track-list-template').innerHTML,
+          template = Handlebars.compile(templateSource),
+          resultsPlaceholder = document.getElementById(playlistId);
+          var inner = resultsPlaceholder.innerHTML;
+          resultsPlaceholder.innerHTML =inner + template(response);      
+    }
+
+    function getSimilarPlaylist(accessToken,userId,playlistId){
+      var tracks = [];
+      var iter = 0;
+      getPlaylistTracks(accessToken,userId,playlistId,30).then(function(response){
+        for (i in response.items){
+          var track = {};
+          track['name'] = response.items[i].track.name;
+          track['id'] = response.items[i].track.id;
+          track['album'] = response.items[i].track.album.name;
+          track['artistName'] = response.items[i].track.artists[iter].name;
+          track['artistId'] = response.items[i].track.artists[iter].id;
+          tracks.push(track);
+
+          if (response.items.length + iter < 30){
+            i--;
+            iter++;
+          }
+        }
+        
+        getArtistFromTracks(accessToken,userId,tracks,trackStuff);
+        
+      });
+    }
+
+    function trackStuff(accessToken,userId,similar){
+      if (similar.length < 30){
+        return;
+      }
+
+      var items = [];
+      var iter = 0;
+      $.each(similar,function(i){
+          getTopTrack(accessToken,similar[i].id).done(function(response){
+            if (response.tracks[0] && response.tracks[0].name){
+              var track = response.tracks[0];
+              items.push(track);
+              renderSimilar(accessToken,userId,items);
+            }
+          });          
+      });
+    }
+
+    function renderSimilar(accessToken,userId,songs){
+              var templateSource = document.getElementById('new-list-template').innerHTML,
+              template = Handlebars.compile(templateSource),
+              resultsPlaceholder = document.getElementById('prospective');
+              var temp = {};
+              temp['items'] = songs;
+              resultsPlaceholder.innerHTML = template(temp); 
+              var playlistButton = document.getElementById('new-list-button');
+              playlistButton.addEventListener("click",function(e){
+                var uris = e.target.className;
+                var name = document.getElementById("name").value;
+
+                createPlaylist(accessToken,userId,name).then(function(response){
+                  console.log(response);
+                  var url = response.external_urls.spotify;
+                  addSongsPlaylist(accessToken,userId,response.id,uris).then(function(res){
+                    console.log(res);
+                    document.getElementById("tracks").innerHTML = "<a href=\""+url+"\">Listen Now!</a>";
+
+                  });
+                });
+              });
+
+    }
+
+    function getArtistFromTracks(accessToken,userId,tracks,callback){
+        var similar = [];
+        for (i in tracks){
+            getSimilarArtists(accessToken,userId,tracks[i]['artistId']).then(function(response){
+              var index = Math.floor(Math.random()*response.artists.length);
+              for (j in tracks){
+                if (i == j || response.artists[index] == tracks[j]){
+                  i--;
+                  break;
+                }
+              }
+
+              similar.push(response.artists[index]);
+              callback(accessToken,userId,similar);
+            });
+        }
+    }
+
+    function getSimilarArtists(accessToken,userId,artistId){
+      return $.ajax({
+        url:"https://api.spotify.com/v1/artists/"+artistId+"/related-artists",
+        headers: {
+          "Authorization" : "Bearer "+accessToken
+        }
+      })
+    }
+
+    var templateSource =document.getElementById('result-template').innerHTML,
+        template = Handlebars.compile(templateSource),
+        resultsPlaceholder = document.getElementById('result'),
+        loginButton = document.getElementById('btn-login');
+    
+    loginButton.addEventListener('click', function() {
+        login(function(accessToken) {
+            getUserData(accessToken)
+                .then(function(response) {
+                    console.log(response);
+                    var userId = response.id;
+                    getUserPlaylist(accessToken,response.id).then(function(response){
+                      renderPlaylists(response,userId,accessToken);
+                    });
+                    loginButton.style.display = 'none';
+                    resultsPlaceholder.innerHTML = template(response);
+                });
+            });
+    });
+    
+})();
+}//]]>  
+
+</script>
+
+
+
+
+
+</body></html>
