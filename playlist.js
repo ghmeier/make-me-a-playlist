@@ -37,7 +37,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
 
     function login(callback) {
         var CLIENT_ID = 'ff3f738d49e74607b92e27a50e8e424d';
-        var REDIRECT_URI = 'http://localhost/make-me-a-playlist/callback.html';
+        var REDIRECT_URI = 'http://garretmeier.com/make-me-a-playlist/callback.html';
         function getLoginURL(scopes) {
             return 'https://accounts.spotify.com/authorize?client_id=' + CLIENT_ID +
               '&redirect_uri=' + encodeURIComponent(REDIRECT_URI) +
