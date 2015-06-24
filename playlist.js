@@ -2,7 +2,7 @@ window.onload=function(){
 (function() {
   //$("")
   Handlebars.registerHelper('list', function(items, options) {
-  var out = "<ul class='collection'><div class='collection-item'><input id='limit' type='text' class='validate'><label for='first_name'>New Playlist Track Amount</label></div>";
+  var out = "<ul class='collection'><div class='collection-item'><input id='limit' type='text' placeholder='30' class='validate'><label for='limit'>New Playlist Track Amount</label></div>";
 
   for(var i=0, l=items.length; i<l; i++) {
     out = out + "<li class='collection-item'><div>" + options.fn(items[i]) +"<a href='#!' class='secondary-content waves-effect waves-green' id='"+items[i].id+"'>Find Similar!</a></div></li>";
