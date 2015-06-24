@@ -2,7 +2,7 @@ window.onload=function(){
 (function() {
   //$("")
   Handlebars.registerHelper('list', function(items, options) {
-  var out = "<ul class='collection'>";
+  var out = "<ul class='collection'><div class='collection-item'><input id='limit' type='text' class='validate'><label for='first_name'>New Playlist Track Amount</label></div>";
 
   for(var i=0, l=items.length; i<l; i++) {
     out = out + "<li class='collection-item'><div>" + options.fn(items[i]) +"<a href='#!' class='secondary-content waves-effect waves-green' id='"+items[i].id+"'>Find Similar!</a></div></li>";
@@ -44,28 +44,28 @@ Handlebars.registerHelper('newlist', function(items, options) {
               '&scope=' + encodeURIComponent(scopes.join(' ')) +
               '&response_type=token';
         }
-        
+
         var url = getLoginURL([
             'user-read-email',"playlist-read-private","playlist-modify-public","playlist-modify-private","user-library-read"
         ]);
-        
+
         var width = 450,
             height = 730,
             left = (screen.width / 2) - (width / 2),
             top = (screen.height / 2) - (height / 2);
-    
+
         window.addEventListener("message", function(event) {
             var hash = JSON.parse(event.data);
             if (hash.type == 'access_token') {
                 callback(hash.access_token);
             }
         }, false);
-        
+
         var w = window.open(url,
                             'Spotify',
                             'menubar=no,location=no,resizable=no,scrollbars=no,status=no, width=' + width + ', height=' + height + ', top=' + top + ', left=' + left
                            );
-        
+
     }
 
     function getUserData(accessToken) {
@@ -83,7 +83,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
             headers: {
                'Authorization': 'Bearer ' + accessToken
             }
-        });     
+        });
     }
 
     function getTopTrack(accessToken,artistId){
@@ -92,7 +92,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
             headers: {
                'Authorization': 'Bearer ' + accessToken
             }
-        });     
+        });
     }
 
     function createPlaylist(accessToken,userId,name){
@@ -103,17 +103,18 @@ Handlebars.registerHelper('newlist', function(items, options) {
             headers: {
                'Authorization': 'Bearer ' + accessToken
             }
-        });        
+        });
     }
 
     function addSongsPlaylist(accessToken,userId,playlistId,songs){
+
        return $.ajax({
             type:"POST",
             url: 'https://api.spotify.com/v1/users/'+userId+"/playlists/"+playlistId+"/tracks?position=0&uris="+encodeURIComponent(songs),
             headers: {
                'Authorization': 'Bearer ' + accessToken
             }
-        });        
+        });
     }
 
     function renderPlaylists(response,userId,accessToken){
@@ -122,7 +123,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
                 if (response.items[i].owner.id === userId){
                   personalPlaylists.items.push(response.items[i]);
                 }else{
-                  console.log(response.items[i]);
+                  //console.log(response.items[i]);
                 }
               }
               var templateSource = document.getElementById('playlist-template').innerHTML,
@@ -167,18 +168,21 @@ Handlebars.registerHelper('newlist', function(items, options) {
     }
 
     function renderPlaylistTracks(response,userId,playlistId){
-          console.log(response);
           var templateSource = document.getElementById('track-list-template').innerHTML,
           template = Handlebars.compile(templateSource),
           resultsPlaceholder = document.getElementById(playlistId);
           var inner = resultsPlaceholder.innerHTML;
-          resultsPlaceholder.innerHTML =inner + template(response);      
+          resultsPlaceholder.innerHTML =inner + template(response);
     }
 
     function getSimilarPlaylist(accessToken,userId,playlistId){
       var tracks = [];
+      var limit = parseInt(document.getElementById("limit").value);
+      if (!limit || limit <= 0 ){
+        limit = 30;
+      }
       var iter = 0;
-      getPlaylistTracks(accessToken,userId,playlistId,30).success(function(response){
+      getPlaylistTracks(accessToken,userId,playlistId,limit).success(function(response){
         for (i=0;i<response.items.length;i++){
           var track = {};
           track['name'] = response.items[i].track.name;
@@ -188,23 +192,22 @@ Handlebars.registerHelper('newlist', function(items, options) {
           track['artistId'] = response.items[i].track.artists[0].id;
           tracks.push(track);
 
-          if (response.items.length + iter < 30){
-            console.log(i);
+          if (response.items.length + iter < limit){
             i--;
             iter++;
           }
         }
-        
-        getArtistFromTracks(accessToken,userId,tracks,trackStuff);
-        
+
+        getArtistFromTracks(accessToken,userId,tracks,limit,trackStuff);
+
       }).error(function(error){
                       console.log(error.responseJSON.error.message);
                       toast(error.responseJSON.error.message,4000);
                     });;
     }
 
-    function trackStuff(accessToken,userId,similar){
-      if (similar.length < 30){
+    function trackStuff(accessToken,userId,similar,limit){
+      if (similar.length < limit){
         return;
       }
 
@@ -221,7 +224,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
           }).error(function(error){
                       console.log(error.responseJSON.error.message);
                       toast(error.responseJSON.error.message,4000);
-                    });;          
+                    });;
       });
     }
 
@@ -231,23 +234,25 @@ Handlebars.registerHelper('newlist', function(items, options) {
               resultsPlaceholder = document.getElementById('prospective');
               var temp = {};
               temp['items'] = songs;
-              console.log(songs);
-              resultsPlaceholder.innerHTML = template(temp); 
+              resultsPlaceholder.innerHTML = template(temp);
               var playlistButton = document.getElementById('new-list-button');
               playlistButton.addEventListener("click",function(e){
-                var uris = e.target.getAttribute("data-uris");
+                var uris = e.target.getAttribute("data-uris").split(",");
                 var name = document.getElementById("name").value;
 
                 createPlaylist(accessToken,userId,name).success(function(response){
-                  var url = response.external_urls.spotify;
-                  addSongsPlaylist(accessToken,userId,response.id,uris).success(function(res){
-                    document.getElementById("prospective").innerHTML = "<div class='col s12 l12'><a class='btn-large waves-effect waves-light' target='_blank' href=\""+url+"\" >Listen Now!</a></div>";
-                    $(".collapsible").collapsible({accordion:true});
-
-                  }).error(function(error){
-                      console.log(error.responseJSON.error.message);
-                      toast(error.responseJSON.error.message,4000);
-                    });
+                    var url = response.external_urls.spotify;
+                    var index = 0;
+                    while (index < uris.length ){
+                        addSongsPlaylist(accessToken,userId,response.id,uris.slice(index,index+50)).success(function(res){
+                            document.getElementById("prospective").innerHTML = "<div class='col s12 l12'><a class='btn-large waves-effect waves-light' target='_blank' href=\""+url+"\" >Listen Now!</a></div>";
+                            $(".collapsible").collapsible({accordion:true});
+                        }).error(function(error){
+                            console.log(error.responseJSON.error.message);
+                            toast(error.responseJSON.error.message,4000);
+                        });
+                        index += 50;
+                    }
                 }).error(function(error){
                       console.log(error.responseJSON.error.message);
                       toast(error.responseJSON.error.message,4000);
@@ -256,7 +261,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
 
     }
 
-    function getArtistFromTracks(accessToken,userId,tracks,callback){
+    function getArtistFromTracks(accessToken,userId,tracks,limit,callback){
         var similar = [];
         for (i in tracks){
             getSimilarArtists(accessToken,userId,tracks[i]['artistId']).success(function(response){
@@ -269,7 +274,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
               }
 
               similar.push(response.artists[index]);
-              callback(accessToken,userId,similar);
+              callback(accessToken,userId,similar,limit);
             }).error(function(error){
                       console.log(error.responseJSON.error.message);
                       toast(error.responseJSON.error.message,4000);
@@ -290,7 +295,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
         template = Handlebars.compile(templateSource),
         resultsPlaceholder = document.getElementById('result'),
         loginButton = document.getElementById('btn-login');
-    
+
     loginButton.addEventListener('click', function() {
         login(function(accessToken) {
             getUserData(accessToken)
@@ -308,6 +313,6 @@ Handlebars.registerHelper('newlist', function(items, options) {
                 });
             });
     });
-    
+
 })();
-}//]]> 
+}
