@@ -79,7 +79,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
 
     function getUserPlaylist(accessToken,userId){
         return $.ajax({
-            url: 'https://api.spotify.com/v1/users/'+userId+"/playlists?offset=0&limit=100",
+            url: 'https://api.spotify.com/v1/users/'+userId+"/playlists?offset=0&limit=50",
             headers: {
                'Authorization': 'Bearer ' + accessToken
             }
