@@ -266,12 +266,12 @@ Handlebars.registerHelper('newlist', function(items, options) {
         for (i in tracks){
             getSimilarArtists(accessToken,userId,tracks[i]['artistId']).success(function(response){
               var index = Math.floor(Math.random()*response.artists.length);
-              for (j in tracks){
+/*              for (j in tracks){
                 if (i == j || response.artists[index] == tracks[j]){
                   i--;
                   break;
                 }
-              }
+              }*/
 
               similar.push(response.artists[index]);
               callback(accessToken,userId,similar,limit);
