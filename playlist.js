@@ -157,7 +157,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
     function getPlaylistTracks(accessToken,userId,playlistId,limit){
       var url = "https://api.spotify.com/v1/users/"+userId+"/playlists/"+playlistId+"/tracks?fields=items(track(id,name,album(id,name),artists(name,id)))&offset=0";
         if (limit){
-          url+="&limit=100";
+          url+="&limit="+limit;
         }
       return $.ajax({
         url: url,
