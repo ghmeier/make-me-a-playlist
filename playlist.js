@@ -272,7 +272,9 @@ Handlebars.registerHelper('newlist', function(items, options) {
                   break;
                 }
               }*/
-
+              if (i > limit ){
+                break;
+              }
               similar.push(response.artists[index]);
               callback(accessToken,userId,similar,limit);
             }).error(function(error){
