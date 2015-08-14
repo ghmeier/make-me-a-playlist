@@ -264,6 +264,9 @@ Handlebars.registerHelper('newlist', function(items, options) {
     function getArtistFromTracks(accessToken,userId,tracks,limit,callback){
         var similar = [];
         for (i in tracks){
+            if (i > limit ){
+              break;
+            }
             getSimilarArtists(accessToken,userId,tracks[i]['artistId']).success(function(response){
               var index = Math.floor(Math.random()*response.artists.length);
 /*              for (j in tracks){
@@ -272,9 +275,6 @@ Handlebars.registerHelper('newlist', function(items, options) {
                   break;
                 }
               }*/
-              if (i > limit ){
-                break;
-              }
               similar.push(response.artists[index]);
               callback(accessToken,userId,similar,limit);
             }).error(function(error){
