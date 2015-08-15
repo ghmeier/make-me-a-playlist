@@ -133,10 +133,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
 
               for (i in personalPlaylists.items){
                 var playlistButton = document.getElementById(personalPlaylists.items[i].id);
-/*                playlistButton.addEventListener("click",function(e){
-                  var playlistId = e.target.id;
-                  playlistClick(accessToken,userId,playlistId);
-                });*/
+
                 var moreButton = document.getElementById(personalPlaylists.items[i].id);
                 moreButton.addEventListener('click',function(e){
                   var playlistId = e.target.id.replace("_get","");
@@ -190,7 +187,17 @@ Handlebars.registerHelper('newlist', function(items, options) {
           track['album'] = response.items[i].track.album.name;
           track['artistName'] = response.items[i].track.artists[0].name;
           track['artistId'] = response.items[i].track.artists[0].id;
-          tracks.push(track);
+
+          for (id in tracks){
+            if (track["artistName"] == tracks[id]['artistName']){
+              track.exists = true;
+              break;
+            }
+          }
+
+          if (!track.exists){
+            tracks.push(track);
+          }
 
           if (response.items.length + iter < limit){
             i--;
@@ -269,12 +276,7 @@ Handlebars.registerHelper('newlist', function(items, options) {
             }
             getSimilarArtists(accessToken,userId,tracks[i]['artistId']).success(function(response){
               var index = Math.floor(Math.random()*response.artists.length);
-/*              for (j in tracks){
-                if (i == j || response.artists[index] == tracks[j]){
-                  i--;
-                  break;
-                }
-              }*/
+
               similar.push(response.artists[index]);
               callback(accessToken,userId,similar,limit);
             }).error(function(error){
